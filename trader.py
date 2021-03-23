@@ -6,8 +6,8 @@
 
 # ==== MODULES
 from resources.message import Message
-
-
+import time
+import requests, json
 
 
 
@@ -18,10 +18,14 @@ class Trader:
         self.gui_connection = g_conn
 
         self.app_variables = app_vars
+        self.active_coins = app_vars['coins']
+        self.base_url = 'https://api.gemini.com/'
 
 
     # mainloop
     def start(self):
+
+        self.pullCandleData()
 
         # check for incoming messages
         def checkForMessages():
@@ -51,13 +55,15 @@ class Trader:
 
     # creates a Message object and sends it through the
     # corresponding pipe
-    def sendMessage(to, m='', d=''):
+    def sendMessage(self, to, m='', d=''):
         message = Message(m, d)
 
-        if (to == 'trader'):
-            self.trader_connection.send(message)
+        if (to == 'data'):
+            print('MESSAGE: trader --> data')
+            self.data_connection.send(message)
 
         if (to == 'gui'):
+            print('MESSAGE: trader --> gui')
             self.gui_connection.send(message)
 
 
@@ -65,3 +71,25 @@ class Trader:
     def handleMessage(self, m):
 
         pass
+
+
+    def pullCandleData(self):
+        print('pulling candle data...')
+        out_data = {}
+        timeframe = self.app_variables['timeframe']
+
+        for coin in self.active_coins:
+
+            try:
+                endpoint = f"v2/candles/{coin}/{timeframe}"
+                time.sleep(1)   # wait one second
+                response = requests.get(self.base_url + endpoint)
+                candles = response.json()
+                out_data[coin] = candles
+
+            except Exception as e:
+                print(e)
+                pass
+
+        if (out_data):
+            self.sendMessage('data', 'calc-data', out_data)

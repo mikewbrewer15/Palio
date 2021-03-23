@@ -49,15 +49,17 @@ class Data:
 
 
 
-    # creates a Message object and sends it through the corresponding
-    # pipe
+    # creates a Message object and sends it through the
+    # corresponding pipe
     def sendMessage(self, to, m='', d=''):
         message = Message(m, d)
 
         if (to == 'trader'):
+            print('MESSAGE: data --> trader')
             self.trader_connection.send(message)
 
         if (to == 'gui'):
+            print('MESSAGE: data --> gui')
             self.gui_connection.send(message)
 
 
@@ -65,5 +67,133 @@ class Data:
     # handles incoming messages
     def handleMessage(self, m):
 
+        if (m.message == 'calc-data'):
+            print('DATA: calculating data...')
+            self.calculateData(m.data)      # m.data is a dict {'coin': [candles]}
 
         pass
+
+
+    # loop through active coins and calculate all data
+    # send the data to ui to display
+    # check for buy and sell signals --> send message back to trader if signals
+    def calculateData(self, d):
+
+        out_data = {}
+
+        for coin in d:
+            out_data[coin] = {}
+
+            close_prices_all = []
+            for candle in d[coin]:
+                close_prices_all.append(candle[4])
+
+
+            close_prices = close_prices_all[:(self.app_variables['display_window'])]
+            close_prices.reverse()
+            out_data[coin]['close_prices'] = close_prices
+
+            out_data[coin]['emas_long'] = self.calculateFullEMAs(close_prices_all, self.app_variables['periods_long'])
+            out_data[coin]['emas_short'] = self.calculateFullEMAs(close_prices_all, self.app_variables['periods_short'])
+            out_data[coin]['macds'] = self.calculateFullMACDs(out_data[coin]['emas_long'], out_data[coin]['emas_short'])
+            out_data[coin]['macds_signal'] = self.calculateFullMACDSignals(out_data[coin]['macds'], self.app_variables['periods_signal'])
+            out_data[coin]['rsis'] = self.calculateFullRSIs(d[coin], self.app_variables['periods_rsi'])
+
+        print(out_data)
+        self.sendMessage('gui', m='display-data', d=out_data)
+
+
+
+    # calculate exponential moving average for the given periods
+    def calculateFullEMAs(self, prices, periods):
+        window = self.app_variables['display_window']
+
+        def calcEMA(p, e_last, d):
+            smoothing = self.app_variables['ema_smoothing']
+            return ((p * (smoothing / (1 + d))) + (e_last * (1 - (smoothing / (1 + d)))))
+
+        p = prices[:(window + periods)]
+        p.reverse()
+
+        ema_last = (sum(p[:periods]) / periods)
+        out_data = []
+
+        for price in p[periods:]:
+            ema = calcEMA(price, ema_last, periods)
+            out_data.append(ema)
+            ema_last = ema
+
+        return out_data
+
+
+
+
+
+    # calculate moving average convergence divergence values
+    def calculateFullMACDs(self, longs, shorts):
+        macds = []
+
+        for i in range(0, len(longs)):
+            macds.append(shorts[i] - longs[i])
+
+        return macds
+
+
+
+
+
+    # calculate macd signal line --> moving average of macd
+    def calculateFullMACDSignals(self, macds, periods):
+        window = self.app_variables['display_window']
+
+        def calcEMA(p, e_last, d):
+            smoothing = self.app_variables['ema_smoothing']
+            return ((p * (smoothing / (1 + d))) + (e_last * (1 - (smoothing / (1 + d)))))
+
+        macd_last = macds[0]
+        out_data = []
+
+        for macd in macds[1:]:
+            avg_macd = calcEMA(macd, macd_last, periods)
+            out_data.append(avg_macd)
+            macd_last = avg_macd
+
+        n = window - len(out_data)
+        temp = [out_data[0] for i in range(0, n)]
+        return (temp + out_data)
+
+
+
+
+    # calculate relative strength index for the given periods
+    def calculateFullRSIs(self, candles, periods):
+        window = self.app_variables['display_window']
+        p = candles[:(window + periods)]
+        p.reverse()
+
+        out_data = []
+
+        def calcRS(c):
+            up = []
+            down = []
+
+            for candle in c:
+                chng = candle[1] - candle[4]
+
+                if chng > 0:
+                    down.append(chng)
+                else:
+                    up.append(-chng)
+
+            avgUp = (sum(up) / periods)
+            avgDown = (sum(down) / periods)
+            return (avgUp / (1 if avgDown == 0 else avgDown))
+
+
+
+        for i in range(periods, (window + periods)):
+            rs = calcRS(candles[i - periods:(i)])
+            rsi = 100 - (100 / (1 + rs))
+            out_data = [rsi] + out_data
+
+        return out_data

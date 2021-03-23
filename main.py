@@ -22,9 +22,11 @@ class MainApp:
         app_variables = {
             'coins': ['btcusd', 'ethusd', 'ltcusd', 'filusd', 'linkusd', 'oxtusd', 'renusd'],
             'timeframe': '1m',
+            'display_window': 60,
             'periods_long': 26,
             'periods_short': 12,
             'periods_signal': 9,
+            'periods_rsi': 20,
             'ema_smoothing': 2,
             'rsi_crossover': 45,
             'rsi_oversold': 25,

@@ -41,5 +41,7 @@ class GUI:
 
     def handleMessage(self, m):
 
+        if (m.message == 'display-data'):
+            print('displaying data')
 
         pass
