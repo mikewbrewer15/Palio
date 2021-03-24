@@ -1,10 +1,14 @@
+# ================================================
+#   FILE: trader.py
+#
+#   Handles communication with the API and sends raw data
+#   to the data process for computation. Receives buy and sell
+#   signal info from the data process and the gui (manually) and
+#   places orders through the API.
+#
 
 
-
-
-
-
-# ==== MODULES
+# ==== IMPORTS
 from resources.message import Message
 import time
 import requests, json
@@ -14,8 +18,8 @@ import requests, json
 
 class Trader:
     def __init__(self, app_vars, d_conn, g_conn):
-        self.data_connection = d_conn
-        self.gui_connection = g_conn
+        self.data_connection = d_conn   # communication with the data process
+        self.gui_connection = g_conn    # communication with the gui process
 
         self.app_variables = app_vars
         self.active_coins = app_vars['coins']
@@ -27,6 +31,7 @@ class Trader:
 
         self.pullCandleData()
 
+        # 60 second refresh time for pulling candle data
         refresh_rate = 60
         refresh_last = time.time()
 
@@ -81,6 +86,9 @@ class Trader:
         pass
 
 
+
+    # pulls the raw candle data for each active coin and sends
+    # the raw data to the data process
     def pullCandleData(self):
         print('pulling candle data...')
         out_data = {}

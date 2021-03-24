@@ -1,4 +1,9 @@
-
+# ================================================
+#   FILE: gui.py
+#
+#   Handles displaying data in a graphical format, easier to digest quickly
+#   and also allows for manual button input for buying and selling coins
+#
 
 
 
@@ -29,6 +34,7 @@ class GUI(tk.Frame):
 
         self.refresh_rate = 5000    # 5 seconds
 
+        # signal line data used to display in the graphs
         self.zero_list = [0 for i in range(0, app_vars['display_window'])]
         self.rsi_crossover_list = [app_vars['rsi_crossover'] for i in range(0, app_vars['display_window'])]
         self.rsi_oversold_list = [app_vars['rsi_oversold'] for i in range(0, app_vars['display_window'])]
@@ -39,18 +45,26 @@ class GUI(tk.Frame):
 
 
 
-
+    # creates the main TK window, done here instead of __init__ so that it is part
+    # of its own process and therefor allows for proper Pipe communication. Tk can
+    # throw an error when using multiprocessing if not done this way.
     def start(self):
         self.root = tk.Tk(className="Palio")
         tk.Frame.__init__(self, self.root)
 
+        # set interval for checking for messages
         self.root.after(1000, self.checkForMessages)
+
+        # initialize the windows
         self.initializeWindows()
+
+        # start the mainloop
         self.root.mainloop()
 
 
 
 
+    # checks for incoming messages from the data and trader processes
     def checkForMessages(self):
 
         if self.data_connection.poll():
@@ -73,7 +87,9 @@ class GUI(tk.Frame):
 
 
 
-    def sendMessage(to, m='', d=''):
+    # creates a message object and routes that through the correct
+    # Pipe
+    def sendMessage(self, to, m='', d=''):
         message = Message(m, d)
 
         if (to == 'trader'):
@@ -84,16 +100,18 @@ class GUI(tk.Frame):
 
 
 
+    # handles incoming messages
     def handleMessage(self, m):
 
         if (m.message == 'display-data'):
             self.displayData(m.data)
 
-        
 
 
 
 
+    # creates all the labels and buttons for the main window
+    # creates Toplevel windows for each active coin
     def initializeWindows(self):
         main_label = tk.Label(self.root, text='Palio - Crypto Trading Bot', fg='black').grid(row=0, column=0, columnspan=3)
 
@@ -132,6 +150,9 @@ class GUI(tk.Frame):
         ren_buy_btn = tk.Button(self.root, text='BUY', fg='black', command= lambda: self.sendMessage('trader', 'buy-signal-manual', 'renusd')).grid(row=r, column=1)
         ren_sell_btn = tk.Button(self.root, text='SELL', fg='black', command= lambda: self.sendMessage('trader', 'sell-signal-manual', 'renusd')).grid(row=r, column=2)
 
+
+
+        # create Toplevel windows for each active coin
         self.coin_windows = {}
 
         for coin in self.app_variables['coins']:
@@ -165,7 +186,8 @@ class GUI(tk.Frame):
 
 
 
-
+    # displays data to the corresponding plots and windows
+    # computation is done in the data process and sent here via Pipe
     def displayData(self, d):
         for coin in d:
             self.coin_windows[coin]['PLOT_A'].clear()

@@ -1,12 +1,13 @@
 # ================================================
 #   FILE: data.py
 #
-#   Drives the computation part of the application, waits until the
-#   trader process sends a message to update
+#   Drives the computation part of the application, receives raw data from the
+#   trader process and performes comoputations. Sends finalized data to
+#   the gui process and sends any buy or sell signals to the trader process
 #
 
 
-# ==== MODULES
+# ==== IMPORTS
 from resources.message import Message
 
 
