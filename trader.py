@@ -27,6 +27,9 @@ class Trader:
 
         self.pullCandleData()
 
+        refresh_rate = 60
+        refresh_last = time.time()
+
         # check for incoming messages
         def checkForMessages():
 
@@ -48,6 +51,11 @@ class Trader:
         while True:
             # check for incoming messages
             checkForMessages()
+
+            t = time.time()
+            if ((t - refresh_last) > refresh_rate):
+                self.pullCandleData()
+                refresh_last = t
 
 
 

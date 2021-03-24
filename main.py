@@ -13,6 +13,8 @@ from data import Data
 from gui import GUI
 from trader import Trader
 
+import os
+
 
 
 class MainApp:
@@ -69,5 +71,7 @@ class MainApp:
 
 
 if __name__ == '__main__':
+    os.system('clear')
+
     app = MainApp()
     app.start()

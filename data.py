@@ -99,7 +99,6 @@ class Data:
             out_data[coin]['macds_signal'] = self.calculateFullMACDSignals(out_data[coin]['macds'], self.app_variables['periods_signal'])
             out_data[coin]['rsis'] = self.calculateFullRSIs(d[coin], self.app_variables['periods_rsi'])
 
-        print(out_data)
         self.sendMessage('gui', m='display-data', d=out_data)
 
 
