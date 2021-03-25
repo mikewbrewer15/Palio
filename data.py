@@ -248,6 +248,14 @@ class Data:
             return False
 
 
+        def checkPriceEMACrossoverBuy(_d):
+            if not((_d['close_prices'][-2] > _d['emas_short'][-2]) and (_d['emas_short'][-2] > _d['emas_long'][-2])):
+                return True
+            return False
+
+
+
+
         # evaluate buy conditions
         if checkPriceEMA(d):
             if checkMACDCrossoverBuy(d) and checkRSI(d):
@@ -257,6 +265,11 @@ class Data:
             if checkRSICrossoverBuy(d) and checkMACD(d):
                 self.sendMessage('trader', 'buy-signal-rsi', coin)
                 return
+
+            if checkPriceEMACrossoverBuy(d) and checkMACD(d) and checkRSI(d):
+                self.sendMessage('trader', 'buy-signal-ema', coin)
+                return
+
 
 
         if checkMACDCrossoverSell(d):

@@ -30,10 +30,10 @@ class MainApp:
             'periods_signal': 9,
             'periods_rsi': 20,
             'ema_smoothing': 2,
-            'rsi_crossover': 45,
+            'rsi_crossover': 50,
             'rsi_oversold': 25,
             'rsi_overbought': 75,
-            'stop_loss_percent': 0.005,
+            'stop_loss_percent': 0.01,
             'round_amounts': {
                 'btcusd': 2,
                 'ethusd': 2,

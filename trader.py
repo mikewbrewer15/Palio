@@ -19,6 +19,9 @@ import pandas as pd
 
 
 
+
+# ==== GLOBAL VARIABLES AND FUNCTIONS
+
 COLORS = {
     'ERROR': '\u001b[31m',
     'RESET': '\u001b[0m',
@@ -47,9 +50,9 @@ def PRINT_SELL_EVENT(coin, order, t):
     percent = round(calcPercent(order['bid'], order['ask']), 4)
 
     if (order['ask'] > order['bid']):
-        print(f"SOLD[{t}]::{coin.upper()} --> bid: {COLORS['YELLOW']}$ {order['bid']}{COLORS['RESET']}   ask: {COLORS['GREEN']}$ {order['ask']}   {percent} %{COLORS['RESET']}")
+        print(f"SOLD[{t}]::{coin.upper()} --> bid: {COLORS['YELLOW']}$ {order['bid']}{COLORS['RESET']}   ask: {COLORS['GREEN']}$ {order['ask']}   {percent * 100} %{COLORS['RESET']}")
     else:
-        print(f"SOLD[{t}]::{coin.upper()} --> bid: {COLORS['YELLOW']}$ {order['bid']}{COLORS['RESET']}   ask: {COLORS['RED']}$ {order['ask']}   {percent} %{COLORS['RESET']}")
+        print(f"SOLD[{t}]::{coin.upper()} --> bid: {COLORS['YELLOW']}$ {order['bid']}{COLORS['RESET']}   ask: {COLORS['RED']}$ {order['ask']}   {percent * 100} %{COLORS['RESET']}")
 
 
 
@@ -68,6 +71,9 @@ def DISPLAY_ORDERS(orders):
 
 
 
+
+
+# ==== TRADER CLASS
 
 class Trader:
     def __init__(self, app_vars, d_conn, g_conn):
@@ -129,7 +135,8 @@ class Trader:
                 t = time.time()
                 if ((t - display_last) > display_rate):
 
-                    for coin in self.active_orders:
+                    temp = self.active_orders.copy()
+                    for coin in temp:
                         endpoint = f'v2/ticker/{coin}'
 
                         try:
@@ -139,6 +146,10 @@ class Trader:
 
                         except:
                             pass
+
+                        if (ask < self.active_orders[coin]['stop-loss']):
+                            self.handleMessage(Message('sell-signal-stoploss', coin))
+                            continue
 
 
                         new_stop = self.calculateStopLoss(ask)
@@ -174,7 +185,7 @@ class Trader:
     def handleMessage(self, m):
 
         # handle buy signal
-        if (m.message == 'buy-signal-manual') or (m.message == 'buy-signal-rsi') or (m.message == 'buy-signal-macd'):
+        if ('buy-signal' in m.message):
             if not(m.data in self.active_orders):
                 type = m.message.split('-')[2]
                 bid = self.placeBuyOrder(m.data)
@@ -191,7 +202,7 @@ class Trader:
 
 
         # handle sell signal
-        if (m.message == 'sell-signal-manual') or (m.message == 'sell-signal-rsi') or (m.message == 'sell-signal-macd'):
+        if ('sell-signal' in m.message):
             if (m.data in self.active_orders):
                 type = m.message.split('-')[2]
                 ask = self.placeSellOrder(m.data)
@@ -211,11 +222,12 @@ class Trader:
                     'buy-type': self.active_orders[m.data]['buy-type'],
                     'sell-type': self.active_orders[m.data]['sell-type'],
                     'buy-price': self.active_orders[m.data]['bid'],
-                    'sell-price': self.active_orders[m.data]['ask']
-
+                    'sell-price': self.active_orders[m.data]['ask'],
+                    'timeframe': self.app_variables['timeframe'],
+                    'sl-percent': self.app_variables['stop_loss_percent']
                 }
 
-                cols = ['coin', 'buy-type', 'sell-type', 'buy-price', 'sell-price']
+                cols = ['coin', 'buy-type', 'sell-type', 'buy-price', 'sell-price', 'timeframe']
 
                 df = pd.DataFrame(columns=cols)
                 df = df.append(d, ignore_index=True)
