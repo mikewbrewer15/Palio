@@ -33,6 +33,7 @@ class MainApp:
             'rsi_crossover': 45,
             'rsi_oversold': 25,
             'rsi_overbought': 75,
+            'stop_loss_percent': 0.005,
             'round_amounts': {
                 'btcusd': 2,
                 'ethusd': 2,

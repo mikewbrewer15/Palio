@@ -93,10 +93,12 @@ class GUI(tk.Frame):
         message = Message(m, d)
 
         if (to == 'trader'):
+            #print('MESSAGE: gui --> trader')
             self.trader_connection.send(message)
 
-        if (to == 'gui'):
-            self.gui_connection.send(message)
+        if (to == 'data'):
+            #print('MESSAGE: gui --> data')
+            self.data_connection.send(message)
 
 
 

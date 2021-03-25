@@ -56,11 +56,11 @@ class Data:
         message = Message(m, d)
 
         if (to == 'trader'):
-            print('MESSAGE: data --> trader')
+            #print('MESSAGE: data --> trader')
             self.trader_connection.send(message)
 
         if (to == 'gui'):
-            print('MESSAGE: data --> gui')
+            #print('MESSAGE: data --> gui')
             self.gui_connection.send(message)
 
 
@@ -69,7 +69,7 @@ class Data:
     def handleMessage(self, m):
 
         if (m.message == 'calc-data'):
-            print('DATA: calculating data...')
+            #print('DATA: calculating data...')
             self.calculateData(m.data)      # m.data is a dict {'coin': [candles]}
 
         pass
@@ -99,6 +99,9 @@ class Data:
             out_data[coin]['macds'] = self.calculateFullMACDs(out_data[coin]['emas_long'], out_data[coin]['emas_short'])
             out_data[coin]['macds_signal'] = self.calculateFullMACDSignals(out_data[coin]['macds'], self.app_variables['periods_signal'])
             out_data[coin]['rsis'] = self.calculateFullRSIs(d[coin], self.app_variables['periods_rsi'])
+
+            self.evaluateMarketConditions(coin, out_data[coin])
+
 
         self.sendMessage('gui', m='display-data', d=out_data)
 
@@ -197,3 +200,69 @@ class Data:
             out_data = [rsi] + out_data
 
         return out_data
+
+
+
+    def evaluateMarketConditions(self, coin, d):
+
+        # check if price > ema_short > ema_long
+        def checkPriceEMA(_d):
+            if ((_d['close_prices'][-1] > _d['emas_short'][-1]) and (_d['emas_short'][-1] > _d['emas_long'][-1])):
+                return True
+            return False
+
+        # check if macd line is above the macd signal line
+        def checkMACD(_d):
+            if (_d['macds'][-1] > _d['macds_signal'][-1]):
+                return True
+            return False
+
+        # check if rsi is above the crossover value --> indicatind a positive trend
+        def checkRSI(_d):
+            if (_d['rsis'][-1] > self.app_variables['rsi_crossover']):
+                return True
+            return False
+
+        # check if macd line crosses from below to above the macd signal line
+        def checkMACDCrossoverBuy(_d):
+            if (_d['macds'][-1] > _d['macds_signal'][-1]) and (_d['macds'][-2] < _d['macds_signal'][-2]):
+                return True
+            return False
+
+        # check if macd line crosses from above to below the macd signal line
+        def checkMACDCrossoverSell(_d):
+            if (_d['macds'][-1] < _d['macds_signal'][-1]) and (_d['macds'][-2] > _d['macds_signal'][-2]):
+                return True
+            return False
+
+        # check if rsi crosses from below to above the crossover value --> indicating shift to positive trend
+        def checkRSICrossoverBuy(_d):
+            if (_d['rsis'][-1] > self.app_variables['rsi_crossover']) and (_d['rsis'][-2] < self.app_variables['rsi_crossover']):
+                return True
+            return False
+
+        # check if rsi crosses from above to below the crossover value --> indicating shift to negative trend
+        def checkRSICrossoverSell(_d):
+            if (_d['rsis'][-1] < self.app_variables['rsi_crossover']) and (_d['rsis'][-2] > self.app_variables['rsi_crossover']):
+                return True
+            return False
+
+
+        # evaluate buy conditions
+        if checkPriceEMA(d):
+            if checkMACDCrossoverBuy(d) and checkRSI(d):
+                self.sendMessage('trader', 'buy-signal-macd', coin)
+                return
+
+            if checkRSICrossoverBuy(d) and checkMACD(d):
+                self.sendMessage('trader', 'buy-signal-rsi', coin)
+                return
+
+
+        if checkMACDCrossoverSell(d):
+            self.sendMessage('trader', 'sell-signal-macd', coin)
+            return
+
+        if checkRSICrossoverSell(d):
+            self.sendMessage('trader', 'sell-signal-rsi', coin)
+            return
